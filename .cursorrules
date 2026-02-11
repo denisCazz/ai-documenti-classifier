@@ -1,0 +1,87 @@
+# .cursorrules
+
+## Project Scope
+SaaS B2B Multi-Tenant per Document Intelligence & RAG.
+Ogni utente appartiene a un'Organizzazione (Tenant).
+Ogni Organizzazione ha le proprie configurazioni API (OpenAI Key, Vector DB settings, Prompts) salvate su Database.
+
+## Tech Stack
+- **Frontend:** Next.js 14 (App Router), Tailwind, Shadcn UI.
+- **Backend:** Python FastAPI.
+- **Database:** Supabase (PostgreSQL + Auth + pgvector).
+
+## Architecture & Patterns
+1. **Multi-Tenancy:**
+   - Ogni tabella del DB deve avere una colonna `tenant_id` (o `org_id`).
+   - Ogni richiesta API deve risolvere il `tenant_id` dall'utente loggato (via JWT Supabase).
+   - **RLS (Row Level Security):** TASSATIVO. Gli utenti vedono solo i dati del loro tenant.
+
+2. **Dynamic Configuration (The "Context" Pattern):**
+   - MAI usare `os.getenv('OPENAI_API_KEY')` per le chiamate AI dei clienti.
+   - Usa `TenantConfigService` che, dato un `tenant_id`, recupera le chiavi API e i prompt dal DB.
+   - Inietta queste configurazioni nel servizio RAG al momento della chiamata (`runtime injection`).
+
+3. **Backend Modularity:**
+   - `/services`: Logica di business pura (agnostica dal framework web).
+   - `/routers`: Gestione HTTP e estrazione utente/tenant.
+   - `/models`: Schemi Pydantic e DB.
+
+## Security
+- Le chiavi API dei clienti nel DB devono essere trattate con cura.
+- In produzione andrebbero criptate; per MVP va bene testo semplice ma in tabella separata (`organization_settings`).
+- MAI esporre le chiavi API nei response JSON al frontend (mascherarle).
+
+## File Structure
+```
+MVP-MISTRAL/
+├── backend/
+│   ├── main.py
+│   ├── config.py
+│   ├── dependencies.py
+│   ├── supabase_client.py
+│   ├── models/
+│   │   ├── __init__.py
+│   │   └── schemas.py
+│   ├── services/
+│   │   ├── __init__.py
+│   │   ├── tenant_config.py
+│   │   ├── ingestion.py
+│   │   └── rag_engine.py
+│   ├── routers/
+│   │   ├── __init__.py
+│   │   ├── chat.py
+│   │   ├── documents.py
+│   │   └── settings.py
+│   ├── requirements.txt
+│   └── .env.example
+├── frontend/
+│   ├── src/
+│   │   ├── app/
+│   │   │   ├── layout.tsx
+│   │   │   ├── page.tsx
+│   │   │   ├── dashboard/
+│   │   │   │   ├── layout.tsx
+│   │   │   │   ├── page.tsx
+│   │   │   │   ├── chat/
+│   │   │   │   │   └── page.tsx
+│   │   │   │   └── settings/
+│   │   │   │       └── page.tsx
+│   │   │   └── auth/
+│   │   │       └── login/
+│   │   │           └── page.tsx
+│   │   ├── lib/
+│   │   │   ├── supabase/
+│   │   │   │   ├── client.ts
+│   │   │   │   └── server.ts
+│   │   │   └── api.ts
+│   │   └── components/
+│   │       ├── settings-form.tsx
+│   │       └── chat-interface.tsx
+│   ├── package.json
+│   ├── tailwind.config.ts
+│   ├── tsconfig.json
+│   └── .env.local.example
+├── database/
+│   └── schema.sql
+└── .cursorrules
+```
