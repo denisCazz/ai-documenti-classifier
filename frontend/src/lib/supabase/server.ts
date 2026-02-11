@@ -1,6 +1,7 @@
 /**
  * Supabase Server-Side
  * Per Server Components e Route Handlers.
+ * Usa @supabase/ssr solo lato server (non viene bundlato dal client).
  */
 
 import { createServerClient, type CookieOptions } from "@supabase/ssr";

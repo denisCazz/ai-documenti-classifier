@@ -30,3 +30,4 @@ out/
 # Misc
 .cache/
 .parcel-cache/
+*.example
